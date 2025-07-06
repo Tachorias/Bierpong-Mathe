@@ -12,8 +12,6 @@ g = 9.81  # Erdanziehung
 e_kugel = 0.88  # Elastizität_Kugel
 dt = 0.1  # Zeitschritt
 dauer = 5  # Dauer
-positionen_y = []
-positionen_x = [] #die Mittelpunkte der Becher
 
 # ------ Tischebene erstellen -------
 x_vals = [0, 60]
@@ -87,7 +85,7 @@ y_start = 0
 z_start = 90
 v0 = 50  # cm/s
 t_winkel = radians(0)
-p_winkel = radians(-10)
+p_winkel = radians(-5)
 vx = v0 * cos(p_winkel) * sin(t_winkel)
 vy = v0 * cos(p_winkel) * cos(t_winkel)
 vz_start = v0 * sin(p_winkel)
@@ -108,16 +106,12 @@ z_start_actual = z_start
 vz = vz_start
 z_tisch = 1
 
+
 # ----- MAIN PROGRAM -----
 fig = figure()
 ax = fig.add_subplot(111, projection='3d')
 camera = Camera(fig)
 
-for dx, dy in positionen_versatz:
-    becher_x = x0 + dx
-    positionen_x.append(becher_x)
-    becher_y = y0 + dy
-    positionen_y.append(becher_y)
 
 dt = 0.1
 total_time = 5
@@ -148,6 +142,13 @@ for t in arange(0, total_time + dt, dt):
     # Momentane vertikale Geschwindigkeit
     vz_t = vz - g * t_rel
 
+    # Kollisionerkennung Becher
+    r = array([x, y, z]) - array([x0, y0, 0])
+    l_x, l_y, l_z = r
+
+    dist_xy = l_x ** 2 + l_y ** 2
+    if (0 <= l_z <= h_becher) and (dist_xy <= (r_becher + r_kugel)**2):
+        print("Kollision")
     # Kollisionserkennung & Abprallen
     if z-r_k <= z_tisch and vz_t < 0:
         vz = -vz_t * e
@@ -188,5 +189,4 @@ for t in arange(0, total_time + dt, dt):
 
 # ------- Animation anzeigen -------
 anim = camera.animate(interval=30)
-print(positionen_y,positionen_x)
 show()
