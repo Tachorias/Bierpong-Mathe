@@ -196,25 +196,25 @@ for t in arange(0, total_time + dt, dt):
 
 
 
-    # Kollisionserkennung mit der Bieroberfläche
-    # if z <= 12 and vz_t < 0:
-    #     for dx, dy in positionen_versatz:
-    #         becher_x = x0 + dx
-    #         becher_y = y0 + dy
-    #         abstand = sqrt((x - becher_x) ** 2 + (
-    #                     y - becher_y) ** 2)  # Abstand zwischen Mittelpunkt des Bechers und des Balles berechnen
-    #
-    #         if abstand <= r_becher - r_kugel:  # damit die Kugel komplett im Becher ist
-    #             # Ball stoppen
-    #             vz = vy = vx = 0
-    #
-    #             # Startwerte auf aktuelle Position setzen
-    #             x_start_actual = x
-    #             y_start_actual = y
-    #             z_start_actual = z
-    #             t_bounce = t
-    #
-    #             break;
+    #Kollisionserkennung mit der Bieroberfläche
+    if z <= 12 and vz_t < 0:
+        for dx, dy in positionen_versatz:
+            becher_x = x0 + dx
+            becher_y = y0 + dy
+            abstand = sqrt((x - becher_x) ** 2 + (
+                        y - becher_y) ** 2)  # Abstand zwischen Mittelpunkt des Bechers und des Balles berechnen
+
+            if abstand <= r_becher - r_kugel:  # damit die Kugel komplett im Becher ist
+                # Ball stoppen
+                vz = vy = vx = 0
+
+                # Startwerte auf aktuelle Position setzen
+                x_start_actual = x
+                y_start_actual = y
+                z_start_actual = z
+                t_bounce = t
+
+                break;
 
     # Kugel zeichnen
     X_k = r_kugel * sin(T_k) * cos(S_k) + x
