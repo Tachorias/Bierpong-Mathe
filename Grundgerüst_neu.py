@@ -1,23 +1,25 @@
 from numpy import *
-from pylab import figure, show, axis
+import matplotlib
+from matplotlib.pyplot import figure, show, axis
+matplotlib.use('TkAgg')
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from celluloid import Camera
 
+
 # ---- Parameter ----
 
-r_becher, h_becher = 4, 12  # Radius_Becher, Hoehe_Becher
+r_becher, h_becher, inner_r_becher = 4, 12, 3.9  # Radius_Becher, Hoehe_Becher
 r_kugel = 2  # Radius_Kugel
 x_tisch, y_tisch, z_tisch = 60, 230, 1  # Breite_Tisch, Laenge_Tisch, Hoehe_Tisch
 g = 9.81  # Erdanziehung
 e_kugel = 0.88  # Elastizität_Kugel
-dt = 0.1  # Zeitschritt
-dauer = 5  # Dauer
+dt = 0.05  # Zeitschritt
 
 # ------ Tischebene erstellen -------
 x_vals = [0, 60]
 y_vals = [0, 230]
 x_t, y_t = meshgrid(x_vals, y_vals)
-z_t = ones((2, 2))  # Tischhöhe = z = 1
+z_t = zeros((2, 2))  # Tischhöhe = z = 1
 
 # ----- Becher erstellen -----
 
@@ -59,7 +61,7 @@ Z = S
 
 
 # ---- Funktion zum Zeichnen von Bechern ----
-def zeichne_becher(ax, x, y, z=1, sichtbar=True):
+def zeichne_becher(ax, x, y, z=0, sichtbar=True):
     seiten, boden, bieroberflaeche = erstelle_becher(x, y, z)
 
     if sichtbar:
@@ -85,7 +87,7 @@ y_start = 0
 z_start = 90
 v0 = 50  # cm/s
 t_winkel = radians(0)
-p_winkel = radians(-5)
+p_winkel = radians(-3)
 vx = v0 * cos(p_winkel) * sin(t_winkel)
 vy = v0 * cos(p_winkel) * cos(t_winkel)
 vz_start = v0 * sin(p_winkel)
@@ -96,7 +98,6 @@ e = 0.88  # Elastizität
 s_k = linspace(0, 2 * pi, 100)
 t_k = s_k
 S_k, T_k = meshgrid(s_k, t_k)
-r_k = 2
 
 # ---- Zeiterfassung & Ballzustand ----
 t_bounce = 0
@@ -113,7 +114,6 @@ ax = fig.add_subplot(111, projection='3d')
 camera = Camera(fig)
 
 
-dt = 0.1
 total_time = 5
 
 for t in arange(0, total_time + dt, dt):
@@ -141,47 +141,85 @@ for t in arange(0, total_time + dt, dt):
 
     # Momentane vertikale Geschwindigkeit
     vz_t = vz - g * t_rel
+    vx_t = vx -g * sin(t_winkel) * cos(t_winkel) * t_rel
+    vy_t = vy -g * cos(t_winkel) * t_rel
 
     # Kollisionerkennung Becher
-    r = array([x, y, z]) - array([x0, y0, 0])
-    l_x, l_y, l_z = r
-
+    local_Sphere = array([x, y, z]) - array([x0, y0, 0])
+    l_x, l_y, l_z = local_Sphere
+    # 3. Abstand in XY-Ebene zur Zylinderachse
+    vertical_dist = l_z - h_becher
     dist_xy = l_x ** 2 + l_y ** 2
-    if (0 <= l_z <= h_becher) and (dist_xy <= (r_becher + r_kugel)**2):
-        print("Kollision")
-    # Kollisionserkennung & Abprallen
-    if z-r_k <= z_tisch and vz_t < 0:
+    if 0 < vertical_dist <= r_kugel:
+
+        vectorS = local_Sphere - array([0,0,12])
+        cylinder_Achse = array([0,0,1])
+        normale = linalg.cross((linalg.cross(vectorS, cylinder_Achse)), cylinder_Achse)
+        normale_2 = vectorS - normale
+        norm_len = linalg.norm(normale_2)
+        # if norm_len == 0:
+        #     continue  # Keine Richtung – Kugel liegt auf Zylinderachse
+
+        direction = normale_2 / norm_len  # Einheitsvektor auf der Endkappe
+
+        # Punkt auf Rand des Bechers in Richtung Kugel
+        p_Kante = array([0, 0, h_becher]) + direction * r_becher
+
+        # Abstand von Kugelmittelpunkt zu diesem Punkt auf dem Rand
+        abstand = linalg.norm(local_Sphere - p_Kante)
+
+        if abstand - 0.01 <= r_becher:
+            print("Kollision Becherkante")
+            vz = -vz_t * e
+            t_bounce = t
+            x_start_actual = x
+            y_start_actual = y
+            z_start_actual = h_becher + r_kugel
+            z = h_becher + r_kugel
+
+
+    if (0 <= l_z <= h_becher) and ((r_becher - r_kugel)**2 <= dist_xy <= (r_becher + r_kugel)**2):
+        print("Kollision Aussenwand")
+    else:
+        if (0 <= l_z <= h_becher) and (dist_xy <= (r_becher - r_kugel)**2):
+            print("Kollision Innenwand")
+
+    #Kollision mit dem Tisch
+    if z-r_kugel <= z_tisch and vz_t < 0:
         vz = -vz_t * e
         t_bounce = t
         x_start_actual = x
         y_start_actual = y
-        z_start_actual = z_tisch + r_k
-        z = z_tisch +r_k
+        z_start_actual = z_tisch + r_kugel
+        z = z_tisch +r_kugel
+
+
+
 
     # Kollisionserkennung mit der Bieroberfläche
-    if z <= 12 and vz_t < 0:
-        for dx, dy in positionen_versatz:
-            becher_x = x0 + dx
-            becher_y = y0 + dy
-            abstand = sqrt((x - becher_x) ** 2 + (
-                        y - becher_y) ** 2)  # Abstand zwischen Mittelpunkt des Bechers und des Balles berechnen
-
-            if abstand <= r_becher - r_kugel:  # damit die Kugel komplett im Becher ist
-                # Ball stoppen
-                vz = vy = vx = 0
-
-                # Startwerte auf aktuelle Position setzen
-                x_start_actual = x
-                y_start_actual = y
-                z_start_actual = z
-                t_bounce = t
-
-                break;
+    # if z <= 12 and vz_t < 0:
+    #     for dx, dy in positionen_versatz:
+    #         becher_x = x0 + dx
+    #         becher_y = y0 + dy
+    #         abstand = sqrt((x - becher_x) ** 2 + (
+    #                     y - becher_y) ** 2)  # Abstand zwischen Mittelpunkt des Bechers und des Balles berechnen
+    #
+    #         if abstand <= r_becher - r_kugel:  # damit die Kugel komplett im Becher ist
+    #             # Ball stoppen
+    #             vz = vy = vx = 0
+    #
+    #             # Startwerte auf aktuelle Position setzen
+    #             x_start_actual = x
+    #             y_start_actual = y
+    #             z_start_actual = z
+    #             t_bounce = t
+    #
+    #             break;
 
     # Kugel zeichnen
-    X_k = r_k * sin(T_k) * cos(S_k) + x
-    Y_k = r_k * sin(T_k) * sin(S_k) + y
-    Z_k = r_k * cos(T_k) + z
+    X_k = r_kugel * sin(T_k) * cos(S_k) + x
+    Y_k = r_kugel * sin(T_k) * sin(S_k) + y
+    Z_k = r_kugel * cos(T_k) + z
     ax.plot_surface(X_k, Y_k, Z_k, cmap='jet', color='orange')
 
     axis('scaled')
