@@ -29,7 +29,7 @@ def kugel_in_aabb(pos, aabb):
 x_vals = [0, 60]
 y_vals = [0, 230]
 x_t, y_t = meshgrid(x_vals, y_vals)
-z_t = zeros((2, 2))  # Tischhöhe = z = 1
+z_t = zeros((2, 2))  # Tischhöhe = z = 0
 
 # ----- Becher erstellen -----
 
@@ -55,7 +55,7 @@ def erstelle_becher(x0, y0, z0):
 
     bieroberflaeche = []
     for i in range(len(t)):
-        bieroberflaeche.append([x0 + x_becher[i], y0 + y_becher[i], z0 + h_becher / 2])
+        bieroberflaeche.append([x0 + x_becher[i], y0 + y_becher[i], z0 + h_becher - 1])
     bieroberflaeche.append(bieroberflaeche[0])
 
     return seiten, boden, bieroberflaeche
@@ -114,13 +114,16 @@ positionen_versatz = [
 #v0 = 50 p = -1 Becherkante
 #v0 = 40 p= 3 Tisch und Becherwand
 #v0 = 50 p=4
+
+#v0 = 49.5  # cm/s
+#p_winkel = radians(3)
 # ---- Wurfparameter ----
 x_start = 30
 y_start = 0
 z_start = 90
-v0 = 49.5  # cm/s
+v0 = 50  # cm/s
 t_winkel = radians(0)
-p_winkel = radians(3)
+p_winkel = radians(-1)
 vx = v0 * cos(p_winkel) * sin(t_winkel)
 vy = v0 * cos(p_winkel) * cos(t_winkel)
 vz = v0 * sin(p_winkel)
