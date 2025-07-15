@@ -121,7 +121,7 @@ positionen_versatz = [
 x_start = 30
 y_start = 0
 z_start = 90
-v0 = 49.5  # cm/s
+v0 = 40  # cm/s
 t_winkel = radians(0)
 p_winkel = radians(3)
 vx = v0 * cos(p_winkel) * sin(t_winkel)
@@ -146,7 +146,7 @@ ax = fig.add_subplot(111, projection='3d')
 camera = Camera(fig)
 
 
-total_time = 6
+total_time = 8
 
 for t in arange(0, total_time + dt, dt):
     # Tisch zeichnen
