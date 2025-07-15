@@ -14,7 +14,7 @@ r_kugel = 2  # Radius_Kugel
 x_tisch, y_tisch, z_tisch = 60, 230, 0  # Breite_Tisch, Laenge_Tisch, Hoehe_Tisch
 g = 9.81  # Erdanziehung
 e_kugel = 0.88  # Elastizität_Kugel
-dt = 0.01 # Zeitschritt
+dt = 0.03 # Zeitschritt
 
 def berechne_aabb_becher(becher_x, becher_y, r_becher, h_becher, puffer=2):
     r_total = r_becher + r_kugel
@@ -55,7 +55,7 @@ def erstelle_becher(x0, y0, z0):
 
     bieroberflaeche = []
     for i in range(len(t)):
-        bieroberflaeche.append([x0 + x_becher[i], y0 + y_becher[i], z0 + h_becher - 1])
+        bieroberflaeche.append([x0 + x_becher[i], y0 + y_becher[i], z0 + h_becher - 11])
     bieroberflaeche.append(bieroberflaeche[0])
 
     return seiten, boden, bieroberflaeche
@@ -115,15 +115,15 @@ positionen_versatz = [
 #v0 = 40 p= 3 Tisch und Becherwand
 #v0 = 50 p=4
 
-#v0 = 49.5  # cm/s
+#v0 = 50  # cm/s
 #p_winkel = radians(3)
 # ---- Wurfparameter ----
 x_start = 30
 y_start = 0
 z_start = 90
-v0 = 49.5  # cm/s
+v0 = 50  # cm/s
 t_winkel = radians(0)
-p_winkel = radians(3)
+p_winkel = radians(-1)
 vx = v0 * cos(p_winkel) * sin(t_winkel)
 vy = v0 * cos(p_winkel) * cos(t_winkel)
 vz = v0 * sin(p_winkel)
@@ -145,15 +145,15 @@ flugbahn_x = []
 flugbahn_y = []
 flugbahn_z = []
 
+collision_points = []
+
 # ----- MAIN PROGRAM -----
 fig = figure()
 ax = fig.add_subplot(111, projection='3d')
 camera = Camera(fig)
 
 
-total_time = 5
-
-
+total_time = 6
 
 for t in arange(0, total_time + dt, dt):
 
@@ -213,9 +213,11 @@ for t in arange(0, total_time + dt, dt):
 
                 if abstand <= r_kugel + 0.01:
                     print("Kollision Becherkante")
+                    world_kollisionspunkt = p_Kante + array([becher_x, becher_y, 0])
+                    collision_points.append(tuple(world_kollisionspunkt))
 
                     kollK_Normale = (local_Sphere - p_Kante) / abstand
-                    v_rel = array([vx, vy, vz])
+                    v_rel = array([vx, vy, vz_t])
                     v_reflektiert = v_rel - (1 + e_kugel) * dot(v_rel, kollK_Normale) * kollK_Normale
 
                     vx, vy, vz = v_reflektiert
@@ -234,15 +236,19 @@ for t in arange(0, total_time + dt, dt):
                 print("vz:", vz)
                 print("vx", vx)
                 print("vy", vy)
+                world_kollisionspunkt = array([becher_x, becher_y, l_z]) + (
+                            array([l_x, l_y, 0]) / linalg.norm([l_x, l_y])) * r_becher
+                collision_points.append(tuple(world_kollisionspunkt))
+
                 cylinder_hoehe_kugel = array([l_x, l_y, 0])
                 kollA_len = cylinder_hoehe_kugel / linalg.norm(cylinder_hoehe_kugel)
                 p_kollA = array([0,0,l_z]) + r_becher * kollA_len
                 kollA_Normale = (local_Sphere - p_kollA) / linalg.norm(local_Sphere - p_kollA)
-                v_rel = array([vx, vy, vz])
+                v_rel = array([vx, vy, vz_t])
                 v_reflektiert = v_rel - (1 + e_kugel) * dot(v_rel, kollA_Normale) * kollA_Normale
                 vx, vy, vz = v_reflektiert
-                # local_Sphere = p_kollA + kollA_Normale * (r_kugel + 1e-3)
-                # x, y, z = local_Sphere + array([becher_x, becher_y, l_z])
+                local_Sphere = p_kollA + kollA_Normale * (r_kugel + 1e-3)
+                x, y, z = local_Sphere + array([becher_x, becher_y, 0])
 
                 t_bounce = t
                 x_start_actual, y_start_actual, z_start_actual = x, y, z
@@ -253,24 +259,26 @@ for t in arange(0, total_time + dt, dt):
                 print("vy", vy)
                 break
 
-            else:
-                if (dist_xy+0.01 <= (r_becher - r_kugel) ** 2):
-                    print("Kollision Innenwand")
-                    cylinder_hoehe_kugel = array([l_x, l_y, 0])
-                    kollA_len = cylinder_hoehe_kugel / linalg.norm(cylinder_hoehe_kugel)
-                    p_kollA = array([0, 0, l_z]) + (r_becher-r_kugel) * kollA_len
-                    kollA_Normale = (local_Sphere - p_kollA) / linalg.norm(local_Sphere - p_kollA)
-                    v_rel = array([vx, vy, vz])
-                    v_reflektiert = v_rel - (1 + e_kugel) * dot(v_rel, kollA_Normale) * kollA_Normale
-                    vx, vy, vz = v_reflektiert
-                    local_Sphere = p_kollA + kollA_Normale * (r_kugel + 1e-3)
-                    x, y, z = local_Sphere + array([becher_x, becher_y, 0])
+            elif(r_becher**2 >dist_xy >= (r_becher - r_kugel) ** 2):
+                print("Kollision Innenwand")
+                print("z:", z)
+                print("vx", vx)
+                print("vy", vy)
+                cylinder_hoehe_kugel = array([l_x, l_y, 0])
+                kollA_len = cylinder_hoehe_kugel / linalg.norm(cylinder_hoehe_kugel)
+                p_kollA = array([0, 0, l_z]) + r_becher * kollA_len
+                kollA_Normale = (local_Sphere - p_kollA) / linalg.norm(local_Sphere - p_kollA)
+                v_rel = array([vx, vy, vz_t])
+                v_reflektiert = v_rel - (1 + e_kugel) * dot(v_rel, kollA_Normale) * kollA_Normale
+                vx, vy, vz = v_reflektiert
+                local_Sphere = p_kollA + kollA_Normale * (r_kugel + 0.01)
+                x, y, z = local_Sphere + array([becher_x, becher_y, 0])
 
-                    t_bounce = t
-                    x_start_actual, y_start_actual, z_start_actual = x, y, z
+                t_bounce = t
+                x_start_actual, y_start_actual, z_start_actual = x, y, z
 
 
-                    break
+                break
 
     if z-r_kugel-0.1 <= z_tisch and vz_t < 0:
         vz = -vz_t * e_kugel
@@ -279,6 +287,8 @@ for t in arange(0, total_time + dt, dt):
         y_start_actual = y
         z_start_actual = z_tisch + r_kugel
         z = z_tisch + r_kugel
+        world_kollisionspunkt = array([x, y, z])
+        collision_points.append(tuple(world_kollisionspunkt))
 
     #Kollisionserkennung mit der Bieroberfläche
     if z <= 0 and vz_t < 0:
@@ -303,8 +313,8 @@ for t in arange(0, total_time + dt, dt):
     Y_k = r_kugel * sin(T_k) * sin(S_k) + y
     Z_k = r_kugel * cos(T_k) + z
     ax.plot_surface(X_k, Y_k, Z_k, cmap='jet', color='orange')
-
-
+    for(x,y,z) in collision_points:
+        ax.scatter(x,y,z, c='r', marker='o', s=30)
 
 
     axis('scaled')
