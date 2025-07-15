@@ -6,3 +6,11 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+#Python Interpreter Problems
+/idea/
+/Bierpong-Mathe.iml
+/idea/
+misc.xml
+/idea/
+/vcs.xml
+
