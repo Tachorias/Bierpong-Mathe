@@ -1,6 +1,6 @@
 from numpy import *
 import matplotlib
-from matplotlib.pyplot import figure, show, axis
+from matplotlib.pyplot import figure, show, axis, plot
 matplotlib.use('TkAgg')
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from celluloid import Camera
@@ -14,7 +14,7 @@ r_kugel = 2  # Radius_Kugel
 x_tisch, y_tisch, z_tisch = 60, 230, 0  # Breite_Tisch, Laenge_Tisch, Hoehe_Tisch
 g = 9.81  # Erdanziehung
 e_kugel = 0.88  # Elastizität_Kugel
-dt = 0.03 # Zeitschritt
+dt = 0.01 # Zeitschritt
 
 def berechne_aabb_becher(becher_x, becher_y, r_becher, h_becher, puffer=2):
     r_total = r_becher + r_kugel
@@ -121,9 +121,9 @@ positionen_versatz = [
 x_start = 30
 y_start = 0
 z_start = 90
-v0 = 50  # cm/s
+v0 = 49.5  # cm/s
 t_winkel = radians(0)
-p_winkel = radians(-1)
+p_winkel = radians(3)
 vx = v0 * cos(p_winkel) * sin(t_winkel)
 vy = v0 * cos(p_winkel) * cos(t_winkel)
 vz = v0 * sin(p_winkel)
@@ -139,6 +139,12 @@ x_start_actual = x_start
 y_start_actual = y_start
 z_start_actual = z_start
 
+# merken der Ballposition zum Flugbahn plotten
+
+flugbahn_x = []
+flugbahn_y = []
+flugbahn_z = []
+
 # ----- MAIN PROGRAM -----
 fig = figure()
 ax = fig.add_subplot(111, projection='3d')
@@ -147,7 +153,10 @@ camera = Camera(fig)
 
 total_time = 5
 
+
+
 for t in arange(0, total_time + dt, dt):
+
     # Tisch zeichnen
     ax.plot_surface(x_t, y_t, z_t, color='grey', alpha=0.3)
 
@@ -166,6 +175,13 @@ for t in arange(0, total_time + dt, dt):
     y = y_start_actual + vy * t_rel
     z = z_start_actual + vz * t_rel - 0.5 * g * t_rel ** 2
 
+    # aktuelle Position zur Flugbahn hinzufügen
+    flugbahn_x.append(x)
+    flugbahn_y.append(y)
+    flugbahn_z.append(z)
+
+
+    #momentane vertikale Geschwindigkeit
     vz_t = vz - g * t_rel
 
 
@@ -265,7 +281,7 @@ for t in arange(0, total_time + dt, dt):
         z = z_tisch + r_kugel
 
     #Kollisionserkennung mit der Bieroberfläche
-    if z <= 13 and vz_t < 0:
+    if z <= 0 and vz_t < 0:
         for dx, dy in positionen_versatz:
             becher_x = x0 + dx
             becher_y = y0 + dy
@@ -288,8 +304,14 @@ for t in arange(0, total_time + dt, dt):
     Z_k = r_kugel * cos(T_k) + z
     ax.plot_surface(X_k, Y_k, Z_k, cmap='jet', color='orange')
 
+
+
+
     axis('scaled')
     camera.snap()
+
+# Flugbahn zeichnen
+ax.plot3D(flugbahn_x, flugbahn_y, flugbahn_z, color='blue')
 
 # ------- Animation anzeigen -------
 anim = camera.animate(interval=30)
