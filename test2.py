@@ -6,6 +6,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from celluloid import Camera
 
 
+
 # ---- Parameter ----
 
 r_becher, h_becher = 4, 12 # Radius_Becher, Hoehe_Becher
@@ -117,9 +118,9 @@ positionen_versatz = [
 x_start = 30
 y_start = 0
 z_start = 90
-v0 = 49.5  # cm/s
+v0 = 50  # cm/s
 t_winkel = radians(0)
-p_winkel = radians(4)
+p_winkel = radians(-1)
 vx = v0 * cos(p_winkel) * sin(t_winkel)
 vy = v0 * cos(p_winkel) * cos(t_winkel)
 vz = v0 * sin(p_winkel)
@@ -143,6 +144,8 @@ camera = Camera(fig)
 
 total_time = 5
 
+kugel_status = 'flug'  # Initialstatus: in der Luft
+
 for t in arange(0, total_time + dt, dt):
     # Tisch zeichnen
     ax.plot_surface(x_t, y_t, z_t, color='grey', alpha=0.3)
@@ -153,7 +156,6 @@ for t in arange(0, total_time + dt, dt):
         becher_y = y0 + dy
         zeichne_becher(ax, becher_x, becher_y)
 
-
     # Zeit seit letztem Aufprall
     t_rel = t - t_bounce
 
@@ -161,11 +163,9 @@ for t in arange(0, total_time + dt, dt):
     x = x_start_actual + vx * t_rel
     y = y_start_actual + vy * t_rel
     z = z_start_actual + vz * t_rel - 0.5 * g * t_rel ** 2
-
     vz_t = vz - g * t_rel
 
-
-    # Kollisionerkennung Becher (optimiert mit Bounding Boxes)
+    kugel_status = 'flug'  # Rücksetzen bei jedem Frame
 
     if z < h_becher + r_kugel + 1:
         kugel_pos = array([x, y, z])
@@ -176,81 +176,114 @@ for t in arange(0, total_time + dt, dt):
 
             aabb = berechne_aabb_becher(becher_x, becher_y, r_becher, h_becher)
             zeichne_bounding_box(ax, aabb)
+
             if not kugel_in_aabb(kugel_pos, aabb):
-                continue  # Kugel ist zu weit weg → keine Kollision möglich
+                continue
 
             local_Sphere = kugel_pos - array([becher_x, becher_y, 0])
             l_x, l_y, l_z = local_Sphere
             dist_xy = l_x ** 2 + l_y ** 2
 
             if dist_xy < (r_becher + r_kugel) ** 2 and l_z > h_becher:
-                # Kollision Becherkante
+                # Becherkante
                 normale = array([l_x, l_y, 0])
                 norm_len = normale / linalg.norm(normale)
-
                 p_Kante = array([0, 0, h_becher]) + norm_len * r_becher
                 abstand = linalg.norm(local_Sphere - p_Kante)
 
                 if abstand <= r_kugel + 0.01:
                     print("Kollision Becherkante")
+                    kugel_status = 'kante'
 
                     kollK_Normale = (local_Sphere - p_Kante) / abstand
                     v_rel = array([vx, vy, vz])
                     v_reflektiert = v_rel - (1 + e_kugel) * dot(v_rel, kollK_Normale) * kollK_Normale
 
                     vx, vy, vz = v_reflektiert
-
                     local_Sphere = p_Kante + kollK_Normale * (r_kugel + 1e-3)
                     x, y, z = local_Sphere + array([becher_x, becher_y, 0])
 
                     t_bounce = t
                     x_start_actual, y_start_actual, z_start_actual = x, y, z
-                    print("Normale:", kollK_Normale)
-                    print("v_reflektiert:", v_reflektiert)
                     break
 
-            elif (r_becher) ** 2 <= dist_xy <= ((r_becher + r_kugel) ** 2)+0.01:
+            elif (r_becher) ** 2 <= dist_xy <= ((r_becher + r_kugel) ** 2) + 0.01:
                 print("Kollision Aussenwand")
-                print("vz:", vz)
-                print("vx", vx)
-                print("vy", vy)
+                kugel_status = 'daneben'
+
                 cylinder_hoehe_kugel = array([l_x, l_y, 0])
                 kollA_len = cylinder_hoehe_kugel / linalg.norm(cylinder_hoehe_kugel)
-                p_kollA = array([0,0,l_z]) + r_becher * kollA_len
+                p_kollA = array([0, 0, l_z]) + r_becher * kollA_len
                 kollA_Normale = (local_Sphere - p_kollA) / linalg.norm(local_Sphere - p_kollA)
                 v_rel = array([vx, vy, vz])
                 v_reflektiert = v_rel - (1 + e_kugel) * dot(v_rel, kollA_Normale) * kollA_Normale
                 vx, vy, vz = v_reflektiert
-                # local_Sphere = p_kollA + kollA_Normale * (r_kugel + 1e-3)
-                # x, y, z = local_Sphere + array([becher_x, becher_y, l_z])
 
                 t_bounce = t
                 x_start_actual, y_start_actual, z_start_actual = x, y, z
-                print("Normale:", kollA_Normale)
-                print("z:", z )
-                print("vz:", vz)
-                print("vx", vx)
-                print("vy", vy)
                 break
 
-            else:
-                if (dist_xy+0.01 <= (r_becher - r_kugel) ** 2):
-                    print("Kollision Innenwand")
-                    cylinder_hoehe_kugel = array([l_x, l_y, 0])
-                    kollA_len = cylinder_hoehe_kugel / linalg.norm(cylinder_hoehe_kugel)
-                    p_kollA = array([0, 0, l_z]) + (r_becher-r_kugel) * kollA_len
-                    kollA_Normale = (local_Sphere - p_kollA) / linalg.norm(local_Sphere - p_kollA)
-                    v_rel = array([vx, vy, vz])
-                    v_reflektiert = v_rel - (1 + e_kugel) * dot(v_rel, kollA_Normale) * kollA_Normale
-                    vx, vy, vz = v_reflektiert
-                    local_Sphere = p_kollA + kollA_Normale * (r_kugel + 1e-3)
-                    x, y, z = local_Sphere + array([becher_x, becher_y, 0])
+            elif dist_xy + 0.01 <= (r_becher - r_kugel) ** 2:
+                print("Kollision Innenwand")
+                kugel_status = 'treffer'
 
-                    t_bounce = t
-                    x_start_actual, y_start_actual, z_start_actual = x, y, z
+                cylinder_hoehe_kugel = array([l_x, l_y, 0])
+                kollA_len = cylinder_hoehe_kugel / linalg.norm(cylinder_hoehe_kugel)
+                p_kollA = array([0, 0, l_z]) + (r_becher - r_kugel) * kollA_len
+                kollA_Normale = (local_Sphere - p_kollA) / linalg.norm(local_Sphere - p_kollA)
+                v_rel = array([vx, vy, vz])
+                v_reflektiert = v_rel - (1 + e_kugel) * dot(v_rel, kollA_Normale) * kollA_Normale
+                vx, vy, vz = v_reflektiert
 
+                local_Sphere = p_kollA + kollA_Normale * (r_kugel + 1e-3)
+                x, y, z = local_Sphere + array([becher_x, becher_y, 0])
+                t_bounce = t
+                x_start_actual, y_start_actual, z_start_actual = x, y, z
+                break
 
-                    break
+    if z - r_kugel - 0.1 <= z_tisch and vz_t < 0:
+        vz = -vz_t * e_kugel
+        t_bounce = t
+        x_start_actual = x
+        y_start_actual = y
+        z_start_actual = z_tisch + r_kugel
+        z = z_tisch + r_kugel
+        kugel_status = 'daneben'
+
+    # Becher getroffen (oberfläche)
+    if z <= 13 and vz_t < 0:
+        for dx, dy in positionen_versatz:
+            becher_x = x0 + dx
+            becher_y = y0 + dy
+            dist_xy = (x - becher_x) ** 2 + (y - becher_y) ** 2
+            if dist_xy <= (r_becher - r_kugel) ** 2:
+                kugel_status = 'treffer'
+                vx = vy = vz = 0
+                x_start_actual = x
+                y_start_actual = y
+                z_start_actual = z
+                t_bounce = t
+                break
+
+    # ---- Farbwahl nach Status ----
+    if kugel_status == 'treffer':
+        farbe = 'green'
+    elif kugel_status == 'kante':
+        farbe = 'blue'
+    elif kugel_status == 'daneben':
+        farbe = 'red'
+    else:
+        farbe = 'orange'
+
+    # Kugel zeichnen
+    X_k = r_kugel * sin(T_k) * cos(S_k) + x
+    Y_k = r_kugel * sin(T_k) * sin(S_k) + y
+    Z_k = r_kugel * cos(T_k) + z
+    ax.plot_surface(X_k, Y_k, Z_k, color=farbe)
+
+    axis('scaled')
+    camera.snap()
+
 
     if z-r_kugel-0.1 <= z_tisch and vz_t < 0:
         vz = -vz_t * e_kugel
@@ -282,7 +315,7 @@ for t in arange(0, total_time + dt, dt):
     X_k = r_kugel * sin(T_k) * cos(S_k) + x
     Y_k = r_kugel * sin(T_k) * sin(S_k) + y
     Z_k = r_kugel * cos(T_k) + z
-    ax.plot_surface(X_k, Y_k, Z_k, cmap='jet', color='orange')
+    ax.plot_surface(X_k, Y_k, Z_k, color='orange')
 
     axis('scaled')
     camera.snap()
