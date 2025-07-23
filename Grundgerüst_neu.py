@@ -16,6 +16,8 @@ g = 9.81  # Erdanziehung
 e_kugel = 0.88  # Elastizität_Kugel
 dt = 0.03 # Zeitschritt
 
+# ----- Bounding Boxes erstellen -----
+
 def berechne_aabb_becher(becher_x, becher_y, r_becher, h_becher, puffer=2):
     r_total = r_becher + r_kugel
     return {
@@ -25,14 +27,17 @@ def berechne_aabb_becher(becher_x, becher_y, r_becher, h_becher, puffer=2):
 
 def kugel_in_aabb(pos, aabb):
     return all(aabb["min"] <= pos) and all(pos <= aabb["max"])
+
+
 # ------ Tischebene erstellen -------
+
 x_vals = [0, 60]
 y_vals = [0, 230]
 x_t, y_t = meshgrid(x_vals, y_vals)
 z_t = zeros((2, 2))  # Tischhöhe = z = 0
 
-# ----- Becher erstellen -----
 
+# ----- Becher erstellen -----
 
 def erstelle_becher(x0, y0, z0):
     t = linspace(0, 2 * pi, 15)
@@ -61,16 +66,9 @@ def erstelle_becher(x0, y0, z0):
     return seiten, boden, bieroberflaeche
 
 
-# # ------- unsichtbare Becher --------
-# s = linspace(0, h_becher, 10)
-# t = linspace(0, 2 * pi, 25)
-# S, T = meshgrid(s, t)
-# X = cos(T) * r_becher
-# Y = sin(T) * r_becher
-# Z = S
-
 
 # ---- Funktion zum Zeichnen von Bechern ----
+
 def zeichne_becher(ax, x, y, z=0):
     seiten, boden, bieroberflaeche = erstelle_becher(x, y, z)
 
@@ -79,6 +77,8 @@ def zeichne_becher(ax, x, y, z=0):
     ax.add_collection3d(Poly3DCollection([bieroberflaeche], facecolors='yellow', edgecolors='black', alpha=0.8))
 
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+# ----- Bounding Boxes zeichnen -----
 
 def zeichne_bounding_box(ax, aabb, farbe='limegreen', alpha=0.2):
     min_p = aabb['min']
@@ -103,6 +103,7 @@ def zeichne_bounding_box(ax, aabb, farbe='limegreen', alpha=0.2):
     ax.add_collection3d(box)
 
 # ---- Becherpositionen ----
+
 x0, y0 = 30, 190
 positionen_versatz = [
     (0, 0),
@@ -112,12 +113,13 @@ positionen_versatz = [
 ]
 #Beispielwürfe
 #v0 = 50 p = -1 Becherkante
-#v0 = 40 p= 3 Tisch und Becherwand
-#v0 = 50 p=4
+#v0 = 40 p = 3 Tisch und Becherwand
+#v0 = 50 p = 4
+#v0 = 50 p = 3
 
-#v0 = 50  # cm/s
-#p_winkel = radians(3)
+
 # ---- Wurfparameter ----
+
 x_start = 30
 y_start = 0
 z_start = 90
@@ -129,11 +131,13 @@ vy = v0 * cos(p_winkel) * cos(t_winkel)
 vz = v0 * sin(p_winkel)
 
 # ---- Kugel erstellen ----
+
 s_k = linspace(0, 2 * pi, 30)
 t_k = s_k
 S_k, T_k = meshgrid(s_k, t_k)
 
 # ---- Zeiterfassung & Ballzustand ----
+
 t_bounce = 0
 x_start_actual = x_start
 y_start_actual = y_start
@@ -227,15 +231,12 @@ for t in arange(0, total_time + dt, dt):
 
                     t_bounce = t
                     x_start_actual, y_start_actual, z_start_actual = x, y, z
-                    print("Normale:", kollK_Normale)
-                    print("v_reflektiert:", v_reflektiert)
+
                     break
 
             elif (r_becher) ** 2 <= dist_xy <= ((r_becher + r_kugel) ** 2)+0.01:
                 print("Kollision Aussenwand")
-                print("vz:", vz)
-                print("vx", vx)
-                print("vy", vy)
+
                 world_kollisionspunkt = array([becher_x, becher_y, l_z]) + (
                             array([l_x, l_y, 0]) / linalg.norm([l_x, l_y])) * r_becher
                 collision_points.append(tuple(world_kollisionspunkt))
@@ -252,18 +253,12 @@ for t in arange(0, total_time + dt, dt):
 
                 t_bounce = t
                 x_start_actual, y_start_actual, z_start_actual = x, y, z
-                print("Normale:", kollA_Normale)
-                print("z:", z )
-                print("vz:", vz)
-                print("vx", vx)
-                print("vy", vy)
+
                 break
 
             elif(r_becher**2 >dist_xy >= (r_becher - r_kugel) ** 2):
                 print("Kollision Innenwand")
-                print("z:", z)
-                print("vx", vx)
-                print("vy", vy)
+
                 cylinder_hoehe_kugel = array([l_x, l_y, 0])
                 kollA_len = cylinder_hoehe_kugel / linalg.norm(cylinder_hoehe_kugel)
                 p_kollA = array([0, 0, l_z]) + r_becher * kollA_len
@@ -276,7 +271,6 @@ for t in arange(0, total_time + dt, dt):
 
                 t_bounce = t
                 x_start_actual, y_start_actual, z_start_actual = x, y, z
-
 
                 break
 
